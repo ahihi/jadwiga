@@ -48,7 +48,15 @@ use activitypub::{
 use rocket::request::{State};
 use rocket::response::status::NotFound;
 
-fn get_actor(config: State<Config>, database: db::Database) -> Result<Person, Error> {
+fn ap_run<T, F>(act: F) -> Result<Json<T>, NotFound<String>>
+    where F: Fn() -> Result<T, Error>
+{
+    act()
+        .map(|data| Json(data))
+        .map_err(|e| NotFound(format!("{}", e)))
+}
+
+fn get_actor(config: &Config, database: &db::Database) -> Result<Person, Error> {
     let mut person = Person::default();
     
     person.object_props.set_context_object(
@@ -73,14 +81,6 @@ fn get_actor(config: State<Config>, database: db::Database) -> Result<Person, Er
     )?;
     
     Ok(person)
-}
-
-#[get("/")]
-fn actor(config: State<Config>, database: db::Database) -> Result<Json<Person>, NotFound<String>> {
-    let person = get_actor(config, database)
-        .map_err(|e| NotFound(format!("{}", e)))?;
-
-    Ok(Json(person))
 }
 
 fn get_note(post: &models::Post) -> Result<Note, Error> {
@@ -113,19 +113,14 @@ fn get_outbox(database: &db::Database) -> Result<OrderedCollection, Error> {
     Ok(outbox)
 }
 
-fn ap_run<T>(act: &Fn() -> Result<T, Error>) -> Result<Json<T>, NotFound<String>> {
-    act()
-        .map(|data| Json(data))
-        .map_err(|e| NotFound(format!("{}", e)))
+#[get("/")]
+fn actor(config: State<Config>, database: db::Database) -> Result<Json<Person>, NotFound<String>> {
+    ap_run(|| get_actor(&config, &database))
 }
 
 #[get("/_outbox")]
 fn outbox(database: db::Database) -> Result<Json<OrderedCollection>, NotFound<String>> {
-    ap_run(&|| {
-        let outbox = get_outbox(&database)?;
-        
-        Ok(outbox)
-    })
+    ap_run(|| get_outbox(&database))
 }
 
 pub fn run(config: Config) -> Result<(), Box<Error>> {
