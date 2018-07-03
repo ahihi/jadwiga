@@ -4,7 +4,8 @@ use ::url::{self, Url};
 pub struct RawConfig {
     pub db_url: String,
     pub root_url: String,
-    pub ap_username: String
+    pub actor_preferred_username: String,
+    pub actor_name: String
 }
 
 impl RawConfig {
@@ -12,7 +13,8 @@ impl RawConfig {
         Ok(Config {
             db_url: self.db_url,
             root_url: Url::parse(&self.root_url)?,
-            ap_username: self.ap_username
+            actor_preferred_username: self.actor_preferred_username,
+            actor_name: self.actor_name
         })
     }
 }
@@ -21,11 +23,16 @@ impl RawConfig {
 pub struct Config {
     pub db_url: String,
     pub root_url: Url,
-    pub ap_username: String
+    pub actor_preferred_username: String,
+    pub actor_name: String
 }
 
 impl Config {
-    pub fn profile_url(&self) -> &str {
-        self.root_url.as_str()
-    }    
+    pub fn actor_url(&self) -> String {
+        self.root_url.as_str().to_owned()
+    }
+
+    pub fn outbox_url(&self) -> String {
+        self.root_url.join("/_outbox").unwrap().as_str().to_owned()
+    }
 }

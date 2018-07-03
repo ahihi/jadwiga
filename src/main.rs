@@ -10,12 +10,13 @@ fn main() {
         .expect("Failed to run dotenv");
 
     let get_env = |var: &str| env::var(var)
-        .expect(&format!("Failed to get Environment variable {}", var));
+        .expect(&format!("Failed to get environment variable {}", var));
     
     let raw_config = RawConfig {
         db_url: get_env("DATABASE_URL"),
         root_url: get_env("ROOT_URL"),
-        ap_username: get_env("AP_USERNAME")
+        actor_preferred_username: get_env("ACTOR_PREFERRED_USERNAME"),
+        actor_name: get_env("ACTOR_NAME")
     };
 
     let config = raw_config.validate()
