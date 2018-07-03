@@ -38,7 +38,7 @@ impl<DB: Backend> FromSql<Binary, DB> for Body
     }
 }
 
-#[derive(Debug, Queryable)]
+#[derive(Debug, Serialize, Deserialize, Queryable)]
 pub struct Post {
     pub id: i32,
     pub uri_name: String,

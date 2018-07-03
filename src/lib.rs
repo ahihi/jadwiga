@@ -1,20 +1,27 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 
+extern crate activitypub;
 extern crate bincode;
 #[macro_use] extern crate diesel;
 extern crate dotenv;
 extern crate failure;
 extern crate rocket;
+extern crate rocket_contrib;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
 
-use diesel::prelude::*;
+use std::error::Error;
 
+use diesel::prelude::*;
+use rocket_contrib::Json;
+
+pub mod config;
 pub mod db;
 pub mod models;
 pub mod schema;
 
+use config::Config;
 use schema::posts;
 
 #[get("/<id>")]
@@ -31,6 +38,44 @@ fn index(id: Option<i32>, database: db::Database) -> String {
         None =>
             "hec".to_owned()
     }
+}
+
+use activitypub::{context, object::{Note, Profile}};
+use rocket::request::{State};
+use rocket::response::status::NotFound;
+
+fn get_profile(config: State<Config>, database: db::Database) -> Result<Profile, activitypub::Error> {
+    let mut profile = Profile::default();
+    
+    profile.object_props.set_context_object(context())?;
+
+    let id = format!("https://{}", config.domain);
+    profile.object_props.set_id_string(id)?;
+    
+    profile.object_props.set_name_string(config.ap_user_name.clone())?;
+
+    Ok(profile)
+}
+
+#[get("/")]
+fn profile(config: State<Config>, database: db::Database) -> Result<Json<Profile>, NotFound<String>> {
+    let profile = get_profile(config, database)
+        .map_err(|e| NotFound(format!("{}", e)))?;
+
+    Ok(Json(profile))
+}
+
+#[get("/outbox")]
+fn outbox(database: db::Database) -> Result<Json<Note>, NotFound<String>> {
+    let results = posts::table
+        .load::<models::Post>(&database.conn)
+        .map_err(|e| NotFound(format!("{}", e)))?;
+
+    let mut note = Note::default();
+    note.object_props.set_context_object(context())
+        .map_err(|e| NotFound(format!("{}", e)))?;
+    
+    Ok(Json(note))
 }
 
 pub fn run() {
@@ -66,8 +111,14 @@ pub fn run() {
     println!("{:?}", results);
     */
 
+    let config = Config {
+        domain: "foldplop.com".to_owned(),
+        ap_user_name: "Foldplop".to_owned()
+    };
+    
     rocket::ignite()
+        .manage(config)
         .manage(pool)
-        .mount("/", routes![index])
+        .mount("/", routes![profile, outbox])
         .launch();
 }
