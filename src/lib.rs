@@ -11,25 +11,29 @@ extern crate serde;
 
 use diesel::prelude::*;
 
-pub mod database;
+pub mod db;
 pub mod models;
 pub mod schema;
 
+use schema::posts;
+
 #[get("/<id>")]
-fn index(id: Option<usize>) -> String {
+fn index(id: Option<i32>, database: db::Database) -> String {
     match id {
-        Some(the_id) =>
-            format!("Hello, world #{}!", the_id),
+        Some(the_id) => {
+            let results = posts::table
+                .filter(posts::id.eq(the_id))
+                .load::<models::Post>(&database.conn)
+                .unwrap();
+
+            format!("{:?}", results).to_owned()
+        },
         None =>
             "hec".to_owned()
     }
 }
 
 pub fn run() {
-    /*rocket::ignite()
-        .mount("/", routes![index])
-    .launch();*/
-
     /*
     let elem = post::Element::Html { content: "<h1>Wow</h1>".to_owned() };
     let bytes = bincode::serialize(&elem).unwrap();
@@ -38,10 +42,8 @@ pub fn run() {
     println!("{:?}", e2);
      */
 
-    use schema::posts;
+    let pool = db::init_pool().unwrap();
     
-    let conn = database::connect().unwrap();
-
     /*
     let new_post = models::NewPost {
         uri_name: "test".to_owned(),
@@ -56,9 +58,16 @@ pub fn run() {
         .unwrap();
      */
     
+    /*
     let results = posts::table
         .load::<models::Post>(&conn)
         .unwrap();
 
     println!("{:?}", results);
+    */
+
+    rocket::ignite()
+        .manage(pool)
+        .mount("/", routes![index])
+        .launch();
 }
