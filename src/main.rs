@@ -1,6 +1,27 @@
+extern crate dotenv;
 extern crate jadwiga;
 
+use std::env;
+
+use jadwiga::config::RawConfig;
+
 fn main() {
-    jadwiga::run();
+    dotenv::dotenv()
+        .expect("Failed to run dotenv");
+
+    let get_env = |var: &str| env::var(var)
+        .expect(&format!("Failed to get Environment variable {}", var));
+    
+    let raw_config = RawConfig {
+        db_url: get_env("DATABASE_URL"),
+        root_url: get_env("ROOT_URL"),
+        ap_username: get_env("AP_USERNAME")
+    };
+
+    let config = raw_config.validate()
+        .expect("Failed to validate config");
+    
+    jadwiga::run(config)
+        .expect("Failed to run jadwiga");
 }
 

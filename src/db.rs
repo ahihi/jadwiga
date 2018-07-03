@@ -1,21 +1,17 @@
-use std::env;
-
 use ::diesel::prelude::*;
 use ::diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use ::diesel::sqlite::SqliteConnection;
-use ::dotenv::dotenv;
 use ::failure::Error;
 use ::rocket::http::Status;
 use ::rocket::request::{self, FromRequest};
 use ::rocket::{Request, State, Outcome};
 
+use config::Config;
+
 pub type SqlitePool = Pool<ConnectionManager<SqliteConnection>>;
 
-pub fn init_pool() -> Result<SqlitePool, Error> {
-    dotenv()?;
-
-    let db_url = env::var("DATABASE_URL")?;
-    let manager = ConnectionManager::<SqliteConnection>::new(db_url);
+pub fn init_pool(config: &Config) -> Result<SqlitePool, Error> {
+    let manager = ConnectionManager::<SqliteConnection>::new(config.db_url.clone());
     let pool = Pool::new(manager)?;
 
     Ok(pool)
