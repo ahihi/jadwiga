@@ -45,6 +45,7 @@ use activitypub::{
     context,
     object::{Note}
 };
+use rocket::Route;
 use rocket::request::{State};
 use rocket::response::status::NotFound;
 
@@ -73,7 +74,7 @@ fn get_actor(config: &Config, database: &db::Database) -> Result<Person, Error> 
     )?;
 
     person.ap_actor_props.set_preferred_username_string(
-        config.actor_preferred_username.clone()
+        config.actor_username.clone()
     )?;
     
     person.ap_actor_props.set_outbox_string(
@@ -123,6 +124,21 @@ fn outbox(database: db::Database) -> Result<Json<OrderedCollection>, NotFound<St
     ap_run(|| get_outbox(&database))
 }
 
+// Mastodon
+
+#[get("/accounts/<id>")]
+fn account(id: Option<String>, config: State<Config>, database: db::Database) -> Result<Json<Person>, NotFound<String>> {
+    match id {
+        Some(id) =>
+            if id == config.actor_username {
+                ap_run(|| get_actor(&config, &database))
+            } else {
+                Err(NotFound("nyoro~n".to_owned()))
+            },
+        None => unimplemented!()
+    }
+}
+
 pub fn run(config: Config) -> Result<(), Box<Error>> {
     let pool = db::init_pool(&config)?;
     
@@ -139,11 +155,15 @@ pub fn run(config: Config) -> Result<(), Box<Error>> {
         .execute(&conn)
         .unwrap();
      */
+
+    let ap_routes = routes![actor, outbox];
+    let mastodon_routes = routes![account];
     
     rocket::ignite()
         .manage(config)
         .manage(pool)
-        .mount("/", routes![actor, outbox])
+        .mount("/", ap_routes)
+        .mount("/api/v1/", mastodon_routes)
         .launch();
 
     Ok(())

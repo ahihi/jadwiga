@@ -15,7 +15,7 @@ fn main() {
     let raw_config = RawConfig {
         db_url: get_env("DATABASE_URL"),
         root_url: get_env("ROOT_URL"),
-        actor_preferred_username: get_env("ACTOR_PREFERRED_USERNAME"),
+        actor_username: get_env("ACTOR_USERNAME"),
         actor_name: get_env("ACTOR_NAME")
     };
 
