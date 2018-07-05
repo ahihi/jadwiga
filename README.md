@@ -1,18 +1,15 @@
 # jadwiga
 
-🎶 Music/video publishing platform. One day it will speak ActivityPub!
+🎶 ActivityPub-speaking music/video/image publishing server
 
-Named after a Nodame Cantabile character who deserved more pages.
+![Nodame & Jadwiga](https://static.foldplop.com/misc/nodame_and_jadwiga.png)
 
 ## Goals
 
-- [x] API: List posts
-- [ ] AP s2s: Profile
-- [ ] AP s2s: Outbox
-- [ ] API: Create post
-- [ ] API: View post
-- [ ] AP s2s: View post
-- [ ] UI: List posts
-- [ ] UI: View post
-- [ ] UI: Create post
-- [ ] AP c2s
+- [x] Profile visible to Mastodon
+- [x] Simple media store
+- [ ] Posts visible to Mastodon
+- [ ] Followable by Mastodon
+- [ ] UI to Create post
+- [ ] UI to List posts
+- [ ] UI to View post
