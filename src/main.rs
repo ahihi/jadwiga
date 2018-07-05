@@ -13,10 +13,11 @@ fn main() {
         .expect(&format!("Failed to get environment variable {}", var));
     
     let raw_config = RawConfig {
-        db_url: get_env("DATABASE_URL"),
-        root_url: get_env("ROOT_URL"),
-        actor_username: get_env("ACTOR_USERNAME"),
-        actor_name: get_env("ACTOR_NAME")
+        db_url: get_env("JADWIGA_DATABASE_URL"),
+        host: get_env("JADWIGA_HOST"),
+        root_url: get_env("JADWIGA_ROOT_URL"),
+        actor_username: get_env("JADWIGA_ACTOR_USERNAME"),
+        actor_name: get_env("JADWIGA_ACTOR_NAME")
     };
 
     let config = raw_config.validate()

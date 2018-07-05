@@ -1,4 +1,4 @@
-#![feature(plugin)]
+#![feature(plugin, custom_derive)]
 #![plugin(rocket_codegen)]
 
 extern crate activitypub;
@@ -11,11 +11,13 @@ extern crate serde;
 #[macro_use] extern crate serde_derive;
 extern crate serde_json;
 extern crate url;
+extern crate webfinger;
 
 use diesel::prelude::*;
 use failure::Error;
 use rocket_contrib::Json;
 
+pub mod api;
 pub mod config;
 pub mod db;
 pub mod models;
@@ -157,12 +159,14 @@ pub fn run(config: Config) -> Result<(), Box<Error>> {
      */
 
     let ap_routes = routes![actor, outbox];
+    let webfinger_routes = api::webfinger::routes();
     let mastodon_routes = routes![account];
-    
+
     rocket::ignite()
         .manage(config)
         .manage(pool)
         .mount("/", ap_routes)
+        .mount("/", webfinger_routes)
         .mount("/api/v1/", mastodon_routes)
         .launch();
 
