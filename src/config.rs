@@ -45,4 +45,8 @@ impl Config {
     pub fn outbox_url(&self) -> String {
         self.root_url.join("/_outbox").unwrap().as_str().to_owned()
     }
+
+    pub fn post_url(&self, uri_name: &str) -> String {
+        self.root_url.join(&format!("/{}", uri_name)).unwrap().as_str().to_owned()
+    }
 }

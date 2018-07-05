@@ -12,7 +12,6 @@ extern crate serde;
 extern crate url;
 extern crate webfinger;
 
-use diesel::prelude::*;
 use failure::Error;
 
 pub mod api;
@@ -23,23 +22,7 @@ pub mod schema;
 
 use config::Config;
 
-#[get("/<id>")]
-fn index(id: Option<i32>, database: db::Database) -> String {
-    match id {
-        Some(the_id) => {
-            let results = schema::posts::table
-                .filter(schema::posts::id.eq(the_id))
-                .load::<models::Post>(&database.conn)
-                .unwrap();
-
-            format!("{:?}", results).to_owned()
-        },
-        None =>
-            "hec".to_owned()
-    }
-}
-
-pub fn run(config: Config) -> Result<(), Box<Error>> {
+pub fn run(config: Config) -> Result<(), Error> {
     let pool = db::init_pool(&config)?;
     
     /*

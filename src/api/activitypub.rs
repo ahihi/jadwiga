@@ -48,25 +48,28 @@ fn get_actor(config: &Config, _database: &Database) -> Result<Value, Error> {
     }))
 }
 
-fn get_note(post: &models::Post) -> Result<Value, Error> {
+fn get_note(post: &models::Post, config: &Config) -> Result<Value, Error> {
     Ok(json!({
-        "type": "Note",
-        "id": post.id.to_string()
+        "type": "Create",
+        "actor": config.actor_url(),
+        "object": config.post_url(&post.uri_name)
     }))
 }
 
-fn get_outbox(database: &Database) -> Result<Value, Error> {
+fn get_outbox(config: &Config, database: &Database) -> Result<Value, Error> {
     let posts = schema::posts::table
         .load::<models::Post>(&database.conn)?;
     
     let items = posts.iter()
-        .map(get_note)
+        .map(|post| get_note(post, config))
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(json!({
         "@context": context::ACTIVITYSTREAMS,
 
         "type": "OrderedCollection",
+        "id": config.outbox_url(),
+        "totalItems": posts.len(),
         "items": items
     }))
 }
@@ -77,8 +80,8 @@ fn actor(config: State<Config>, database: Database) -> Result<Json<Value>, NotFo
 }
 
 #[get("/_outbox")]
-fn outbox(database: Database) -> Result<Json<Value>, NotFound<String>> {
-    ap_run(|| get_outbox(&database))
+fn outbox(config: State<Config>, database: Database) -> Result<Json<Value>, NotFound<String>> {
+    ap_run(|| get_outbox(&config, &database))
 }
 
 pub fn routes() -> Vec<Route> {
