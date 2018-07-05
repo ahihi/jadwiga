@@ -53,6 +53,10 @@ impl Config {
         self.root_url.join(&format!("/{}", uri_name)).unwrap().as_str().to_owned()
     }
 
+    pub fn activity_url(&self, uri_name: &str) -> String {
+        self.root_url.join(&format!("/_activity/{}", uri_name)).unwrap().as_str().to_owned()
+    }
+
     pub fn media_url(&self, file: &str) -> String {
         self.root_url.join(&format!("/_media/{}", file)).unwrap().as_str().to_owned()
     }

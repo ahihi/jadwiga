@@ -1,5 +1,6 @@
 use ::std::path::{Path, PathBuf};
 
+use ::chrono::offset::{TimeZone, Utc};
 use ::diesel::prelude::*;
 use ::failure::Error;
 use ::rocket::Route;
@@ -16,8 +17,10 @@ use db::Database;
 use models;
 use schema;
 
-mod context {
+mod ns {
     pub const ACTIVITYSTREAMS: &str = "https://www.w3.org/ns/activitystreams";
+    pub const PUBLIC: &str = "https://www.w3.org/ns/activitystreams#Public";
+
     pub const SECURITY: &str = "https://w3id.org/security/v1";
 }
 
@@ -34,8 +37,8 @@ fn get_actor(config: &Config, _database: &Database) -> Result<Value, Error> {
         
     Ok(json!({
         "@context": [
-	    context::ACTIVITYSTREAMS,
-	    context::SECURITY
+	    ns::ACTIVITYSTREAMS,
+	    ns::SECURITY
 	],
         
 	"type": "Person",
@@ -59,11 +62,46 @@ fn get_actor(config: &Config, _database: &Database) -> Result<Value, Error> {
     }))
 }
 
-fn get_note(post: &models::Post, config: &Config) -> Result<Value, Error> {
+fn format_timestamp(timestamp: i32) -> String {
+    Utc.timestamp(timestamp as i64, 0)
+        .to_rfc3339()
+}
+
+fn get_content(post: &models::Post) -> String {
+    let mut content = String::new();
+    
+    for piece in post.body.pieces.iter() {
+        let text: &str = match piece {
+            models::Piece::Html(html) => html,
+            _ => "FIXME"
+        };
+        
+        content.push_str(&text);
+    }
+
+    content
+}
+
+fn get_create_note(post: &models::Post, config: &Config) -> Result<Value, Error> {
+    let actor_url = config.actor_url();
+    let published = format_timestamp(post.datetime);
+    
     Ok(json!({
         "type": "Create",
-        "actor": config.actor_url(),
-        "object": config.post_url(&post.uri_name)
+        "id": config.activity_url(&post.uri_name),
+        "actor": actor_url,
+        "published": published,
+        "to": [
+            ns::PUBLIC
+        ],
+        "object": {
+            "type": "Note",
+            "id": config.post_url(&post.uri_name),
+            "attributedTo": actor_url,
+            "published": published,
+            "name": post.title,
+            "content": get_content(post)
+        }
     }))
 }
 
@@ -72,11 +110,11 @@ fn get_outbox(config: &Config, database: &Database) -> Result<Value, Error> {
         .load::<models::Post>(&database.conn)?;
     
     let items = posts.iter()
-        .map(|post| get_note(post, config))
+        .map(|post| get_create_note(post, config))
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(json!({
-        "@context": context::ACTIVITYSTREAMS,
+        "@context": ns::ACTIVITYSTREAMS,
 
         "type": "OrderedCollection",
         "id": config.outbox_url(),
