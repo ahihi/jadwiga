@@ -17,7 +17,7 @@ fn main() {
     let raw_config = RawConfig {
         db_url: get_env("JADWIGA_DATABASE_URL"),
         pub_key: {
-            let pub_key_path = get_env("JADWIGA_PUB_KEY");
+            let pub_key_path = get_env("JADWIGA_PUBLIC_KEY");
             let mut pub_key_file = File::open(pub_key_path)
                 .expect("Failed to open public key file");
 
@@ -29,8 +29,8 @@ fn main() {
         },
         host: get_env("JADWIGA_HOST"),
         root_url: get_env("JADWIGA_ROOT_URL"),
-        actor_username: get_env("JADWIGA_ACTOR_USERNAME"),
-        actor_name: get_env("JADWIGA_ACTOR_NAME"),
+        actor_username: get_env("JADWIGA_USERNAME"),
+        actor_name: get_env("JADWIGA_NAME"),
         media_dir: get_env("JADWIGA_MEDIA_DIR")
     };
 
