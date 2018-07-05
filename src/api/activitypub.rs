@@ -49,7 +49,13 @@ fn get_actor(config: &Config, _database: &Database) -> Result<Value, Error> {
 	    "id": format!("{}#main-key", actor_url),
 	    "owner": actor_url,
 	    "publicKeyPem": config.pub_key
-	}
+	},
+
+        "icon": {
+            "type": "Image",
+            "mediaType": "image/jpeg",
+            "url": config.media_url("icon.jpg")
+        }
     }))
 }
 
