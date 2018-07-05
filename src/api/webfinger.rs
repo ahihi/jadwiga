@@ -2,7 +2,7 @@ use ::rocket::Route;
 use ::rocket::request::State;
 use ::rocket::response::status::NotFound;
 use ::rocket_contrib::Json;
-use ::webfinger::Webfinger;
+use ::webfinger::{Link, Webfinger};
 
 use config::Config;
 
@@ -29,7 +29,13 @@ fn find(query: Query, config: State<Config>) -> Result<Json<Webfinger>, NotFound
     Ok(Json(Webfinger {
         subject: format!("acct:{}@{}", config.actor_username, config.host),
         aliases: vec![config.actor_url()],
-        links: vec![]
+        links: vec![
+            Link {
+                rel: "self".to_owned(),
+                mime_type: Some("application/activity+json".to_owned()),
+                href: config.actor_url()
+            }
+        ]
     }))
 }
 
