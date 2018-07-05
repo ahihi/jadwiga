@@ -28,7 +28,7 @@ fn find(query: Query, config: State<Config>) -> Result<Json<Webfinger>, NotFound
     
     Ok(Json(Webfinger {
         subject: format!("acct:{}@{}", config.actor_username, config.host),
-        aliases: vec![],
+        aliases: vec![config.actor_url()],
         links: vec![]
     }))
 }
