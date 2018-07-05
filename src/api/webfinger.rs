@@ -13,16 +13,9 @@ struct Query {
 
 #[get("/.well-known/webfinger?<query>")]
 fn find(query: Query, config: State<Config>) -> Result<Json<Webfinger>, NotFound<String>>{
-    let parts = query.resource.splitn(2, '@').collect::<Vec<_>>();
-
-    if parts.len() != 2 {
-        return Err(NotFound("nyoro~n".to_owned()))
-    }
+    let acct = format!("acct:{}@{}", config.actor_username, config.host);
     
-    let username = parts[0];
-    let host = parts[1];
-
-    if host != config.host || username != config.actor_username {
+    if query.resource != acct {
         return Err(NotFound("nyoro~n".to_owned()))
     }
     
