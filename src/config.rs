@@ -35,6 +35,10 @@ impl Config {
         self.root_url.as_str().to_owned()
     }
 
+    pub fn inbox_url(&self) -> String {
+        self.root_url.join("/_inbox").unwrap().as_str().to_owned()
+    }
+    
     pub fn outbox_url(&self) -> String {
         self.root_url.join("/_outbox").unwrap().as_str().to_owned()
     }

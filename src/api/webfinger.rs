@@ -1,5 +1,5 @@
 use ::rocket::Route;
-use ::rocket::request::{FromForm, State};
+use ::rocket::request::State;
 use ::rocket::response::status::NotFound;
 use ::rocket_contrib::Json;
 use ::webfinger::Webfinger;
