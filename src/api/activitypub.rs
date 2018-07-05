@@ -1,8 +1,13 @@
+use ::std::path::{Path, PathBuf};
+
 use ::diesel::prelude::*;
 use ::failure::Error;
 use ::rocket::Route;
 use ::rocket::request::State;
-use ::rocket::response::status::NotFound;
+use ::rocket::response::{
+    NamedFile,
+    status::NotFound
+};
 use ::rocket_contrib::Json;
 use ::serde_json::Value;
 
@@ -84,6 +89,11 @@ fn outbox(config: State<Config>, database: Database) -> Result<Json<Value>, NotF
     ap_run(|| get_outbox(&config, &database))
 }
 
+#[get("/_media/<file..>")]
+fn media(file: PathBuf, config: State<Config>) -> Result<NamedFile, Error> {
+    Ok(NamedFile::open(Path::new(&config.media_dir).join(file))?)
+}
+
 pub fn routes() -> Vec<Route> {
-    routes![actor, outbox]
+    routes![actor, outbox, media]
 }

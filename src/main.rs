@@ -30,7 +30,8 @@ fn main() {
         host: get_env("JADWIGA_HOST"),
         root_url: get_env("JADWIGA_ROOT_URL"),
         actor_username: get_env("JADWIGA_ACTOR_USERNAME"),
-        actor_name: get_env("JADWIGA_ACTOR_NAME")
+        actor_name: get_env("JADWIGA_ACTOR_NAME"),
+        media_dir: get_env("JADWIGA_MEDIA_DIR")
     };
 
     let config = raw_config.validate()

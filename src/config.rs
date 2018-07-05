@@ -7,7 +7,8 @@ pub struct RawConfig {
     pub host: String,
     pub root_url: String,
     pub actor_username: String,
-    pub actor_name: String
+    pub actor_name: String,
+    pub media_dir: String
 }
 
 impl RawConfig {
@@ -18,7 +19,8 @@ impl RawConfig {
             host: self.host,
             root_url: Url::parse(&self.root_url)?,
             actor_username: self.actor_username,
-            actor_name: self.actor_name
+            actor_name: self.actor_name,
+            media_dir: self.media_dir
         })
     }
 }
@@ -30,7 +32,8 @@ pub struct Config {
     pub host: String,
     pub root_url: Url,
     pub actor_username: String,
-    pub actor_name: String
+    pub actor_name: String,
+    pub media_dir: String
 }
 
 impl Config {
