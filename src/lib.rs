@@ -1,7 +1,6 @@
 #![feature(plugin, custom_derive)]
 #![plugin(rocket_codegen)]
 
-extern crate activitypub;
 extern crate bincode;
 #[macro_use] extern crate diesel;
 extern crate failure;
@@ -9,7 +8,7 @@ extern crate rocket;
 extern crate rocket_contrib;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
-extern crate serde_json;
+#[macro_use ]extern crate serde_json;
 extern crate url;
 extern crate webfinger;
 

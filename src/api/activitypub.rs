@@ -1,20 +1,20 @@
-use ::activitypub::{
-    actor::Person,
-    collection::OrderedCollection,
-    context,
-    object::Note
-};
 use ::diesel::prelude::*;
 use ::failure::Error;
 use ::rocket::Route;
 use ::rocket::request::State;
 use ::rocket::response::status::NotFound;
 use ::rocket_contrib::Json;
+use ::serde_json::Value;
 
 use config::Config;
 use db::Database;
 use models;
 use schema;
+
+mod context {
+    pub const ACTIVITYSTREAMS: &str = "https://www.w3.org/ns/activitystreams";
+    pub const SECURITY: &str = "https://w3id.org/security/v1";
+}
 
 fn ap_run<T, F>(act: F) -> Result<Json<T>, NotFound<String>>
     where F: Fn() -> Result<T, Error>
@@ -24,74 +24,60 @@ fn ap_run<T, F>(act: F) -> Result<Json<T>, NotFound<String>>
         .map_err(|e| NotFound(format!("{}", e)))
 }
 
-fn get_actor(config: &Config, _database: &Database) -> Result<Person, Error> {
-    let mut person = Person::default();
-    
-    person.object_props.set_context_object(
-        context()
-    )?;
+fn get_actor(config: &Config, _database: &Database) -> Result<Value, Error> {
+    let actor_url = config.actor_url();
+        
+    Ok(json!({
+        "@context": [
+	    context::ACTIVITYSTREAMS,
+	    context::SECURITY
+	],
+        
+	"type": "Person",
+        "id": actor_url,
+        "preferredUsername": config.actor_username,
+        "name": config.actor_name,
+	"inbox": config.inbox_url(),
+        "outbox": config.outbox_url(),
 
-    let id = config.actor_url();
-    person.object_props.set_id_string(
-        id.to_owned()
-    )?;
-    
-    person.object_props.set_name_string(
-        config.actor_name.clone()
-    )?;
-
-    person.ap_actor_props.set_preferred_username_string(
-        config.actor_username.clone()
-    )?;
-
-    person.ap_actor_props.set_inbox_string(
-        config.inbox_url().to_owned()
-    )?;
-    
-    person.ap_actor_props.set_outbox_string(
-        config.outbox_url().to_owned()
-    )?;
-    
-    Ok(person)
+	"publicKey": {
+	    "id": format!("{}#main-key", actor_url),
+	    "owner": actor_url,
+	    "publicKeyPem": config.pub_key
+	}
+    }))
 }
 
-fn get_note(post: &models::Post) -> Result<Note, Error> {
-    let mut note = Note::default();
-
-    note.object_props.set_id_string(
-        post.id.to_string()
-    )?;
-
-    Ok(note)
+fn get_note(post: &models::Post) -> Result<Value, Error> {
+    Ok(json!({
+        "type": "Note",
+        "id": post.id.to_string()
+    }))
 }
 
-fn get_outbox(database: &Database) -> Result<OrderedCollection, Error> {
+fn get_outbox(database: &Database) -> Result<Value, Error> {
     let posts = schema::posts::table
         .load::<models::Post>(&database.conn)?;
     
-    let mut outbox = OrderedCollection::default();
-
-    outbox.object_props.set_context_object(
-        context()
-    )?;
-
     let items = posts.iter()
         .map(get_note)
         .collect::<Result<Vec<_>, _>>()?;
-    outbox.collection_props.set_items_object_vec(
-        items
-    )?;
 
-    Ok(outbox)
+    Ok(json!({
+        "@context": context::ACTIVITYSTREAMS,
+
+        "type": "OrderedCollection",
+        "items": items
+    }))
 }
 
 #[get("/")]
-fn actor(config: State<Config>, database: Database) -> Result<Json<Person>, NotFound<String>> {
+fn actor(config: State<Config>, database: Database) -> Result<Json<Value>, NotFound<String>> {
     ap_run(|| get_actor(&config, &database))
 }
 
 #[get("/_outbox")]
-fn outbox(database: Database) -> Result<Json<OrderedCollection>, NotFound<String>> {
+fn outbox(database: Database) -> Result<Json<Value>, NotFound<String>> {
     ap_run(|| get_outbox(&database))
 }
 

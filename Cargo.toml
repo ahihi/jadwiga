@@ -12,7 +12,6 @@ name = "jadwiga-exe"
 path = "src/main.rs"
 
 [dependencies]
-activitypub = "0.1"
 bincode = "1.0"
 diesel = { version = "1.0", features = ["sqlite", "r2d2"] }
 dotenv = "0.9"
