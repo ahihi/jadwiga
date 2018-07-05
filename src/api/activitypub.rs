@@ -107,6 +107,7 @@ fn get_create_note(post: &models::Post, config: &Config) -> Result<Value, Error>
 
 fn get_outbox(config: &Config, database: &Database) -> Result<Value, Error> {
     let posts = schema::posts::table
+        .order(schema::posts::id.desc())
         .load::<models::Post>(&database.conn)?;
     
     let items = posts.iter()
