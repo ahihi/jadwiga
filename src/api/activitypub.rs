@@ -2,16 +2,17 @@ use ::std::path::{Path, PathBuf};
 
 use ::chrono::offset::{TimeZone, Utc};
 use ::diesel::prelude::*;
-use ::failure::Error;
-use ::rocket::Route;
-use ::rocket::request::State;
-use ::rocket::response::{
-    NamedFile,
-    status::NotFound
+use ::rocket::{
+    Route,
+    request::State,
+    response::{
+        NamedFile
+    }
 };
 use ::rocket_contrib::Json;
 use ::serde_json::Value;
 
+use api::error::Error;
 use config::Config;
 use db::Database;
 use models;
@@ -24,12 +25,10 @@ mod ns {
     pub const SECURITY: &str = "https://w3id.org/security/v1";
 }
 
-fn ap_run<T, F>(act: F) -> Result<Json<T>, NotFound<String>>
+fn ap_run<T, F>(act: F) -> Result<Json<T>, Error>
     where F: Fn() -> Result<T, Error>
 {
-    act()
-        .map(|data| Json(data))
-        .map_err(|e| NotFound(format!("{}", e)))
+    act().map(|data| Json(data))
 }
 
 fn get_actor(config: &Config, _database: &Database) -> Result<Value, Error> {
@@ -82,11 +81,11 @@ fn get_content(post: &models::Post) -> String {
     content
 }
 
-fn get_create_note(post: &models::Post, config: &Config) -> Result<Value, Error> {
+fn get_create_note(post: &models::Post, config: &Config) -> Value {
     let actor_url = config.actor_url();
     let published = format_timestamp(post.datetime);
     
-    Ok(json!({
+    json!({
         "type": "Create",
         "id": config.activity_url(&post.uri_name),
         "actor": actor_url,
@@ -102,7 +101,7 @@ fn get_create_note(post: &models::Post, config: &Config) -> Result<Value, Error>
             "name": post.title,
             "content": get_content(post)
         }
-    }))
+    })
 }
 
 fn get_outbox(config: &Config, database: &Database) -> Result<Value, Error> {
@@ -110,34 +109,39 @@ fn get_outbox(config: &Config, database: &Database) -> Result<Value, Error> {
         .order(schema::posts::id.desc())
         .load::<models::Post>(&database.conn)?;
     
-    let items = posts.iter()
-        .map(|post| get_create_note(post, config))
-        .collect::<Result<Vec<_>, _>>()?;
-
+    let items = posts.into_iter()
+        .map(|post| get_create_note(&post, config))
+        .collect::<Vec<_>>();
+    
     Ok(json!({
         "@context": ns::ACTIVITYSTREAMS,
 
         "type": "OrderedCollection",
         "id": config.outbox_url(),
-        "totalItems": posts.len(),
+        "totalItems": items.len(),
         "items": items
     }))
 }
 
 #[get("/")]
-fn actor(config: State<Config>, database: Database) -> Result<Json<Value>, NotFound<String>> {
+fn actor(config: State<Config>, database: Database) -> Result<Json<Value>, Error> {
     ap_run(|| get_actor(&config, &database))
 }
 
 #[get("/_outbox")]
-fn outbox(config: State<Config>, database: Database) -> Result<Json<Value>, NotFound<String>> {
+fn outbox(config: State<Config>, database: Database) -> Result<Json<Value>, Error> {
     ap_run(|| get_outbox(&config, &database))
 }
 
+
 #[get("/_media/<file..>")]
 fn media(file: PathBuf, config: State<Config>) -> Result<NamedFile, Error> {
-    Ok(NamedFile::open(Path::new(&config.media_dir).join(file))?)
+    let f = NamedFile::open(Path::new(&config.media_dir).join(file))
+        .map_err(Error::from_io)?;
+
+    Ok(f)
 }
+
 
 pub fn routes() -> Vec<Route> {
     routes![actor, outbox, media]

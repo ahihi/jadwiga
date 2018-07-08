@@ -4,7 +4,6 @@ use ::url::{self, Url};
 pub struct RawConfig {
     pub db_url: String,
     pub pub_key: String,
-    pub host: String,
     pub root_url: String,
     pub actor_username: String,
     pub actor_name: String,
@@ -16,7 +15,6 @@ impl RawConfig {
         Ok(Config {
             db_url: self.db_url,
             pub_key: self.pub_key,
-            host: self.host,
             root_url: Url::parse(&self.root_url)?,
             actor_username: self.actor_username,
             actor_name: self.actor_name,
@@ -29,7 +27,6 @@ impl RawConfig {
 pub struct Config {
     pub db_url: String,
     pub pub_key: String,
-    pub host: String,
     pub root_url: Url,
     pub actor_username: String,
     pub actor_name: String,

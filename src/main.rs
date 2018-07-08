@@ -27,7 +27,6 @@ fn main() {
 
             pub_key
         },
-        host: get_env("JADWIGA_HOST"),
         root_url: get_env("JADWIGA_ROOT_URL"),
         actor_username: get_env("JADWIGA_USERNAME"),
         actor_name: get_env("JADWIGA_NAME"),

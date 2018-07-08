@@ -1,9 +1,9 @@
 use ::rocket::Route;
 use ::rocket::request::State;
-use ::rocket::response::status::NotFound;
 use ::rocket_contrib::Json;
 use ::webfinger::{Link, Webfinger};
 
+use api::error::Error;
 use config::Config;
 
 #[derive(Debug, FromForm)]
@@ -12,15 +12,18 @@ struct Query {
 }
 
 #[get("/.well-known/webfinger?<query>")]
-fn find(query: Query, config: State<Config>) -> Result<Json<Webfinger>, NotFound<String>>{
-    let acct = format!("acct:{}@{}", config.actor_username, config.host);
+fn find(query: Query, config: State<Config>) -> Result<Json<Webfinger>, Error>{
+    let host = config.root_url.host_str()
+        .unwrap_or("");
+
+    let acct = format!("acct:{}@{}", config.actor_username, host);
     
     if query.resource != acct {
-        return Err(NotFound("nyoro~n".to_owned()))
+        return Err(Error::NotFound)
     }
     
     Ok(Json(Webfinger {
-        subject: format!("acct:{}@{}", config.actor_username, config.host),
+        subject: acct,
         aliases: vec![config.actor_url()],
         links: vec![
             Link {
