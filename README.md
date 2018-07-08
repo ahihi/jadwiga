@@ -48,8 +48,8 @@ $ cargo run
 
 - [x] Profile visible to Mastodon
 - [x] Simple media store
-- [ ] Posts visible to Mastodon
 - [ ] Followable by Mastodon
+- [ ] Posts visible to Mastodon
 - [ ] UI to Create post
 - [ ] UI to List posts
 - [ ] UI to View post

@@ -14,12 +14,16 @@ pub enum Error {
 }
 
 impl Error {
+    pub fn internal<T: Debug>(e: T) -> Self {
+        Error::Internal(format!("{:?}", e))
+    }
+    
     pub fn from_io(e: io::Error) -> Error {
         match e.kind() {
             io::ErrorKind::NotFound =>
                 Error::NotFound,
-            other =>
-                Error::Internal(format!("{:?}", e))
+            _ =>
+                Error::internal(e)
         }
     }
 }
@@ -32,7 +36,7 @@ impl Display for Error {
 
 impl<E: ::std::error::Error> From<E> for Error {
     fn from(e: E) -> Self {
-        Error::Internal(format!("{:?}", e))
+        Error::internal(e)
     }
 }
 

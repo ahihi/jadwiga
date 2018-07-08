@@ -1,3 +1,4 @@
+use ::std::io;
 use ::std::path::{Path, PathBuf};
 
 use ::chrono::offset::{TimeZone, Utc};
@@ -23,12 +24,6 @@ mod ns {
     pub const PUBLIC: &str = "https://www.w3.org/ns/activitystreams#Public";
 
     pub const SECURITY: &str = "https://w3id.org/security/v1";
-}
-
-fn ap_run<T, F>(act: F) -> Result<Json<T>, Error>
-    where F: Fn() -> Result<T, Error>
-{
-    act().map(|data| Json(data))
 }
 
 fn get_actor(config: &Config, _database: &Database) -> Result<Value, Error> {
@@ -125,23 +120,27 @@ fn get_outbox(config: &Config, database: &Database) -> Result<Value, Error> {
 
 #[get("/")]
 fn actor(config: State<Config>, database: Database) -> Result<Json<Value>, Error> {
-    ap_run(|| get_actor(&config, &database))
+    Ok(Json(get_actor(&config, &database)?))
 }
 
 #[get("/_outbox")]
 fn outbox(config: State<Config>, database: Database) -> Result<Json<Value>, Error> {
-    ap_run(|| get_outbox(&config, &database))
+    Ok(Json(get_outbox(&config, &database)?))
 }
 
 
 #[get("/_media/<file..>")]
 fn media(file: PathBuf, config: State<Config>) -> Result<NamedFile, Error> {
     let f = NamedFile::open(Path::new(&config.media_dir).join(file))
-        .map_err(Error::from_io)?;
+        .map_err(|e| match e.kind() {
+            io::ErrorKind::NotFound =>
+                Error::NotFound,
+            _ =>
+                Error::internal(e)
+        })?;
 
     Ok(f)
 }
-
 
 pub fn routes() -> Vec<Route> {
     routes![actor, outbox, media]
