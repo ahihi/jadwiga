@@ -13,7 +13,7 @@ openssl genrsa -out private.pem 2048
 openssl rsa -in private.pem -outform PEM -pubout -out public.pem
 ````
 
-edit [`Rocket.toml`](https://github.com/SergioBenitez/Rocket/blob/master/examples/config/Rocket.toml) if needed, e.g. to change the listening host/port
+create [`Rocket.toml`](https://github.com/SergioBenitez/Rocket/blob/master/examples/config/Rocket.toml) if needed, e.g. to change the listening host/port 
 
 create [`.env`](https://github.com/purpliminal/rust-dotenv):
 
