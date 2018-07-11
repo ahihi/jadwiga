@@ -4,12 +4,12 @@
 extern crate bincode;
 extern crate chrono;
 #[macro_use] extern crate diesel;
-extern crate failure;
+#[macro_use] extern crate failure;
 extern crate rocket;
 extern crate rocket_contrib;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
-#[macro_use ]extern crate serde_json;
+#[macro_use] extern crate serde_json;
 extern crate url;
 extern crate webfinger;
 
@@ -19,6 +19,7 @@ pub mod api;
 pub mod config;
 pub mod db;
 pub mod models;
+pub mod parser;
 pub mod schema;
 
 use config::Config;
