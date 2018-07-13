@@ -1,3 +1,4 @@
+use ::std::marker::PhantomData;
 use ::std::str::FromStr;
 
 use ::base64;
@@ -59,12 +60,18 @@ impl FromStr for Signature {
 
 #[derive(Debug)]
 pub struct ValidSignature {
-    _unit: ()
+    phantom: PhantomData<()>
 }
 
 fn get_valid_signature<'a, 'r>(request: &'a Request<'r>) -> Result<ValidSignature, ::failure::Error> {
     let headers = request.headers();
 
+    println!("headers:\n");
+    for header in headers.iter() {
+        println!("{}: {}", header.name, header.value);
+    }
+    println!("");
+    
     let signature_header = headers.get_one("Signature")
         .ok_or(format_err!("No 'Signature' header found"))?;
 
@@ -89,7 +96,7 @@ fn get_valid_signature<'a, 'r>(request: &'a Request<'r>) -> Result<ValidSignatur
             .map_err(|e| format_err!("Failed to get actor body: {:?}", e))?
     };
     
-    println!("actor_str: {:?}", actor_str);
+    // println!("actor_str: {:?}", actor_str);
 
     let actor: Value = serde_json::from_str(&actor_str)
         .map_err(|e| format_err!("Failed to parse actor: {:?}", e))?;
@@ -140,7 +147,7 @@ fn get_valid_signature<'a, 'r>(request: &'a Request<'r>) -> Result<ValidSignatur
         .collect::<Result<Vec<String>, _>>()?
         .join("\n");
     
-    println!("comparison_string: {:?}", comparison_string);
+    // println!("comparison_string: {:?}", comparison_string);
     
     verifier.update(comparison_string.as_bytes())?;
 
@@ -150,7 +157,7 @@ fn get_valid_signature<'a, 'r>(request: &'a Request<'r>) -> Result<ValidSignatur
         return Err(format_err!("Failed to verify signature"));
     }
     
-    Ok(ValidSignature {_unit: ()})
+    Ok(ValidSignature {phantom: PhantomData})
 }
 
 impl<'a, 'r> FromRequest<'a, 'r> for ValidSignature {

@@ -1,19 +1,15 @@
-use ::std::io;
+use ::std::io::{self, Read};
 use ::std::path::{Path, PathBuf};
 
 use ::chrono::offset::{TimeZone, Utc};
 use ::diesel::prelude::*;
 use ::rocket::{
-    Route,
-    request::{
-        State
-    },
-    response::{
-        NamedFile
-    }
+    Data, Route,
+    request::State,
+    response::NamedFile
 };
 use ::rocket_contrib::Json;
-use ::serde_json::Value;
+use ::serde_json::{self, Value};
 
 use api::error::Error;
 use config::Config;
@@ -28,7 +24,6 @@ mod ns {
 
     pub const SECURITY: &str = "https://w3id.org/security/v1";
 }
-
 
 fn get_actor(config: &Config, _database: &Database) -> Result<Value, Error> {
     let actor_url = config.actor_url();
@@ -127,8 +122,20 @@ fn actor(config: State<Config>, database: Database) -> Result<Json<Value>, Error
     Ok(Json(get_actor(&config, &database)?))
 }
 
-#[post("/_inbox")]
-fn inbox(config: State<Config>, database: Database, signature: Result<ValidSignature, Error>) -> Result<Json<Value>, Error> {
+#[post("/_inbox", data = "<data>")]
+fn inbox(data: Data, config: State<Config>, database: Database, signature: Result<ValidSignature, Error>) -> Result<Json<Value>, Error> {
+    let mut data_str = String::new();
+    data.open().read_to_string(&mut data_str)?;
+    
+    println!("data_str:\n\n{}\n", data_str);
+
+    let activity: Value = serde_json::from_str(&data_str)
+        .map_err(Error::bad_request)?;
+
+    println!("activity: {:?}", activity);
+
+    // TODO: Process activity
+    
     let signature = signature?;
     
     Ok(Json(Value::Null))
