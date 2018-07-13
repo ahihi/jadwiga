@@ -144,10 +144,67 @@ fn inbox(data: Data, config: State<Config>, database: Database, signature: Resul
     ::diesel::insert_into(schema::inbox::table)
         .values(&new_activity)
         .execute(&database.conn)?;
+
+    // TODO: this goes in a worker thread
+
+    let activities = schema::inbox::table
+        .order(schema::inbox::rowid.asc())
+        .load::<models::Activity>(&database.conn)?;
+
+    for activity in activities {
+        let _ = handle_activity(&config, &activity)
+            .map_err(|e| {
+                println!("handle_activity() failed: {:?}", e);
+                e
+            });
+
+        let delete_q = schema::inbox::table.filter(
+            schema::inbox::rowid.eq(activity.rowid)
+        );
+    
+        ::diesel::delete(delete_q)
+            .execute(&database.conn)?;
+    }
     
     Ok(Json(Value::Null))
 }
 
+fn handle_activity(config: &Config, activity: &models::Activity) -> Result<(), ::failure::Error> {
+    let json: Value = serde_json::from_str(&activity.json)?;
+    
+    let typ: String = json.get("type")
+        .ok_or(format_err!("No 'type' field found"))?
+        .as_str()
+        .ok_or(format_err!("Invalid non-string 'type' field"))?
+        .to_lowercase();
+
+    let actor: &Value = json.get("actor")
+        .ok_or(format_err!("No 'actor' field found"))?;
+
+    let object = json.get("object")
+        .ok_or(format_err!("No 'object' field found"))?;
+
+    match &typ as &str {
+        "follow" => {
+            println!("follow!");
+
+            let object_str = object.as_str()
+                .ok_or(format_err!("Invalid non-string 'object' field"))?;
+            
+            if object_str != config.actor_url() {
+                return Err(format_err!("Object is a different actor"));
+            }
+
+            // TODO: Store in followers collection
+        },
+        _ => {
+            return Err(format_err!("Unsupported activity type: {}", typ));
+        }
+    };
+
+    Ok(())
+}
+    
 #[get("/_outbox")]
 fn outbox(config: State<Config>, database: Database) -> Result<Json<Value>, Error> {
     Ok(Json(get_outbox(&config, &database)?))
