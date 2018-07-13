@@ -129,17 +129,17 @@ fn inbox(data: Data, config: State<Config>, database: Database, signature: Resul
     let mut data_str = String::new();
     data.open().read_to_string(&mut data_str)?;
     
-    println!("data_str:\n\n{}\n", data_str);
+    //println!("data_str:\n\n{}\n", data_str);
 
     let activity_json: Value = serde_json::from_str(&data_str)
         .map_err(Error::bad_request)?;
 
-    println!("activity_json: {:?}", activity_json);
+    //println!("activity_json: {:?}", activity_json);
     
     let new_activity = models::NewActivity::from_json(activity_json)
         .map_err(Error::bad_request)?;
 
-    println!("new_activity: {:?}", new_activity);
+    //println!("new_activity: {:?}", new_activity);
 
     ::diesel::insert_into(schema::inbox::table)
         .values(&new_activity)
@@ -152,18 +152,27 @@ fn inbox(data: Data, config: State<Config>, database: Database, signature: Resul
         .load::<models::Activity>(&database.conn)?;
 
     for activity in activities {
-        let _ = handle_activity(&config, &activity)
-            .map_err(|e| {
+        match handle_activity(&config, &activity) {
+            Ok(()) => {
+                println!("handle_activity() succeeded");
+            },
+            Err(e) => {
                 println!("handle_activity() failed: {:?}", e);
-                e
-            });
+            }
+        };
 
         let delete_q = schema::inbox::table.filter(
             schema::inbox::rowid.eq(activity.rowid)
         );
-    
-        ::diesel::delete(delete_q)
-            .execute(&database.conn)?;
+
+        ::diesel::delete(delete_q).execute(&database.conn)
+            .map(|_| {
+                println!("delete(rowid = {}) succeeded", activity.rowid);
+            })
+            .map_err(|e| {
+                println!("delete(rowid = {}) failed: {:?}", activity.rowid, e);
+                e
+            })?;        
     }
     
     Ok(Json(Value::Null))
