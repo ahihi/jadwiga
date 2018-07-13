@@ -15,7 +15,7 @@ use ::rocket::{
         Request,
     }
 };
-use ::serde_json::Value;
+use ::serde_json::{self, Value};
 
 use api::error::Error;
 use parser;
@@ -70,10 +70,28 @@ fn get_valid_signature<'a, 'r>(request: &'a Request<'r>) -> Result<ValidSignatur
 
     let signature: Signature = signature_header.parse()
         .map_err(|e| format_err!("Failed to parse Signature: {:?}", e))?;
+
+    println!("key_id: {:?}", signature.key_id);
     
-    let actor: Value = ::reqwest::get(&signature.key_id)
-        .map_err(|e| format_err!("Failed to fetch actor: {:?}", e))?
-        .json()
+    let actor_str: String = {
+        use ::reqwest::{header, mime};
+
+        let ld_json = "application/ld+json".parse::<mime::Mime>()?;
+            
+        ::reqwest::Client::new()
+            .get(&signature.key_id)
+            .header(header::Accept(vec![
+                header::qitem(ld_json)
+            ]))
+            .send()
+            .map_err(|e| format_err!("Failed to fetch actor: {:?}", e))?
+            .text()
+            .map_err(|e| format_err!("Failed to get actor body: {:?}", e))?
+    };
+    
+    println!("actor_str: {:?}", actor_str);
+
+    let actor: Value = serde_json::from_str(&actor_str)
         .map_err(|e| format_err!("Failed to parse actor: {:?}", e))?;
 
     let public_key_pem_json: &Value = actor
