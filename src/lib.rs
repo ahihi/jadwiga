@@ -1,10 +1,13 @@
 #![feature(plugin, custom_derive)]
 #![plugin(rocket_codegen)]
 
+extern crate base64;
 extern crate bincode;
 extern crate chrono;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate failure;
+extern crate openssl;
+extern crate reqwest;
 extern crate rocket;
 extern crate rocket_contrib;
 extern crate serde;
@@ -21,6 +24,7 @@ pub mod db;
 pub mod models;
 pub mod parser;
 pub mod schema;
+pub mod sig;
 
 use config::Config;
 

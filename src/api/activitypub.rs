@@ -1,17 +1,11 @@
 use ::std::io;
 use ::std::path::{Path, PathBuf};
-use ::std::str::FromStr;
 
 use ::chrono::offset::{TimeZone, Utc};
 use ::diesel::prelude::*;
 use ::rocket::{
     Route,
-    http::Status,
-    outcome::Outcome,
     request::{
-        self,
-        FromRequest,
-        Request,
         State
     },
     response::{
@@ -25,8 +19,8 @@ use api::error::Error;
 use config::Config;
 use db::Database;
 use models;
-use parser;
 use schema;
+use sig::ValidSignature;
 
 mod ns {
     pub const ACTIVITYSTREAMS: &str = "https://www.w3.org/ns/activitystreams";
@@ -35,66 +29,6 @@ mod ns {
     pub const SECURITY: &str = "https://w3id.org/security/v1";
 }
 
-#[derive(Debug)]
-pub struct Signature {
-    key_id: String,
-    headers: Vec<String>,
-    signature: String
-}
-
-impl FromStr for Signature {
-    type Err = ::failure::Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let fields = parser::sig(s)?;
-
-        let key_id = match fields.get("keyId") {
-            Some(text) => text,
-            None => return Err(format_err!("No 'keyId' field found"))
-        };
-
-        let headers = match fields.get("headers") {
-            Some(text) => parser::sig_headers(text)?,
-            None => return Err(format_err!("No 'headers' field found"))
-        };
-
-        let signature = match fields.get("signature") {
-            Some(text) => text,
-            None => return Err(format_err!("No 'signature' field found"))
-        };
-
-        Ok(Signature {
-            key_id: key_id.to_owned(),
-            headers: headers,
-            signature: signature.to_owned()
-        })
-    }
-}
-
-impl<'a, 'r> FromRequest<'a, 'r> for Signature {
-    type Error = ::failure::Error;
-    fn from_request(request: &'a Request<'r>) -> request::Outcome<Self, Self::Error> {
-        let header = match request.headers().get_one("Signature") {
-            Some(h) => h,
-            None => {
-                let e = format_err!("No 'Signature' header found");
-                println!("e: {}", e);
-                return Outcome::Failure((Status::BadRequest, e))
-            }
-        };
-
-        let signature = match header.parse::<Signature>() {
-            Ok(s) => s,
-            Err(e) => {
-                println!("e: {}", e);
-                return Outcome::Failure((Status::BadRequest, e))
-            }
-        };
-
-        println!("map: {:?}", signature);
-
-        Outcome::Success(signature)
-    }
-}
 
 fn get_actor(config: &Config, _database: &Database) -> Result<Value, Error> {
     let actor_url = config.actor_url();
@@ -194,41 +128,10 @@ fn actor(config: State<Config>, database: Database) -> Result<Json<Value>, Error
 }
 
 #[post("/_inbox")]
-fn inbox(config: State<Config>, database: Database, signature: Signature) -> Result<Json<Value>, Error> {
-
-    println!("{:?}", signature);
-
+fn inbox(config: State<Config>, database: Database, signature: Result<ValidSignature, Error>) -> Result<Json<Value>, Error> {
+    let signature = signature?;
+    
     Ok(Json(Value::Null))
-    /*
-signature_header = request.headers['Signature'].split(',').map do |pair|
-    pair.split('=').map do |value|
-      value.gsub(/\A"/, '').gsub(/"\z/, '') # "foo" -> foo
-    end
-  end.to_h
-
-  key_id    = signature_header['keyId']
-  headers   = signature_header['headers']
-  signature = Base64.decode64(signature_header['signature'])
-
-  actor = JSON.parse(HTTP.get(key_id).to_s)
-  key   = OpenSSL::PKey::RSA.new(actor['publicKey']['publicKeyPem'])
-
-  comparison_string = headers.split(' ').map do |signed_header_name|
-    if signed_header_name == '(request-target)'
-      '(request-target): post /inbox'
-    else
-      "#{signed_header_name}: #{request.headers[signed_header_name.capitalize]}"
-    end
-  end
-
-  if key.verify(OpenSSL::Digest::SHA256.new, signature, comparison_string)
-    request.body.rewind
-    INBOX << request.body.read
-    [200, 'OK']
-  else
-    [401, 'Request signature could not be verified']
-  end
-     */
 }
 
 #[get("/_outbox")]
