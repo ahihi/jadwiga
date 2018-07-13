@@ -124,19 +124,26 @@ fn actor(config: State<Config>, database: Database) -> Result<Json<Value>, Error
 
 #[post("/_inbox", data = "<data>")]
 fn inbox(data: Data, config: State<Config>, database: Database, signature: Result<ValidSignature, Error>) -> Result<Json<Value>, Error> {
+    let _ = signature?;
+
     let mut data_str = String::new();
     data.open().read_to_string(&mut data_str)?;
     
     println!("data_str:\n\n{}\n", data_str);
 
-    let activity: Value = serde_json::from_str(&data_str)
+    let activity_json: Value = serde_json::from_str(&data_str)
         .map_err(Error::bad_request)?;
 
-    println!("activity: {:?}", activity);
-
-    // TODO: Process activity
+    println!("activity_json: {:?}", activity_json);
     
-    let signature = signature?;
+    let new_activity = models::NewActivity::from_json(activity_json)
+        .map_err(Error::bad_request)?;
+
+    println!("new_activity: {:?}", new_activity);
+
+    ::diesel::insert_into(schema::inbox::table)
+        .values(&new_activity)
+        .execute(&database.conn)?;
     
     Ok(Json(Value::Null))
 }
@@ -160,6 +167,24 @@ fn media(file: PathBuf, config: State<Config>) -> Result<NamedFile, Error> {
     Ok(f)
 }
 
+#[get("/_status")]
+fn status(database: Database) -> Result<Json<Value>, Error> {
+    let activities: Vec<Value> = schema::inbox::table
+        .order(schema::inbox::rowid.desc())
+        .load::<models::Activity>(&database.conn)?
+        .iter()
+        .map(|a| Ok(json!({
+            "rowid": a.rowid,
+            "id": a.id,
+            "json": serde_json::from_str::<Value>(&a.json)?
+        })))
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    Ok(Json(json!({
+        "inbox": activities
+    })))
+}
+
 pub fn routes() -> Vec<Route> {
-    routes![actor, inbox, outbox, media]
+    routes![actor, inbox, outbox, media, status]
 }
