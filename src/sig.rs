@@ -120,8 +120,14 @@ fn get_valid_signature<'a, 'r>(request: &'a Request<'r>) -> Result<ValidSignatur
     
     let mut verifier = Verifier::new(MessageDigest::sha256(), &public_key)
         .map_err(|e| format_err!("Failed to create key verifier: {:?}", e))?;
+
+    let mut required_headers = signature.headers.clone();
     
-    let comparison_string: String = signature.headers.iter()
+    if required_headers.iter().find(|h| *h == "date").is_none() {
+        required_headers.push("date".to_owned());
+    }
+    
+    let comparison_string: String = required_headers.iter()
         .map(|header_name| {
             let header_name = header_name.to_lowercase();
             
